@@ -1,0 +1,60 @@
+name: Image builds
+
+on:
+  push:
+    paths:
+      - ".github/workflows/build.yaml"
+      - "src/**"
+  schedule:
+    - cron: "0 21 * * 0"
+  workflow_dispatch:
+
+jobs:
+  build-linux-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - uses: azure/docker-login@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: versioned-images
+        working-directory: .
+        run: |
+          docker-compose -f compose.yml -f amd64.yml build --pull
+          docker-compose -f compose.yml -f amd64.yml push
+
+  build-linux-arm64:
+    runs-on: [self-hosted, Linux, ARM64, docker]
+    steps:
+      - uses: actions/checkout@master  
+
+      - uses: azure/docker-login@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: versioned-images
+        working-directory: .
+        run: |
+          docker compose -f compose.yml -f arm64.yml build --pull
+          docker compose -f compose.yml -f arm64.yml push
+
+  push-manifests:
+    runs-on: ubuntu-latest
+    needs: ['build-linux-amd64', 'build-linux-arm64']
+    steps:
+      - uses: actions/checkout@master
+
+      - uses: azure/docker-login@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: versioned-images
+        working-directory: ./src
+        run: |
+          ./push-manifests.ps1        
+        shell: pwsh

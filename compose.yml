@@ -1,0 +1,7 @@
+version: "3.7"
+
+services:  
+  squeeze2pnp:
+    image: sixeyed/squeeze2pnp:1.81.0
+    build:
+      context: .
