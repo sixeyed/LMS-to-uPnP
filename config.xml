@@ -1,0 +1,42 @@
+    <?xml version="1.0"?>
+    <!-- example -->
+    <squeeze2upnp>
+      <common>
+        <streambuf_size>524288</streambuf_size>
+        <output_size>4194304</output_size>
+        <stream_length>-3</stream_length>
+        <enabled>0</enabled>
+        <remove_timeout>-1</remove_timeout>
+        <codecs>wav,aif,ogf,flc,alc,pcm,mp3,ogg,ops,aac</codecs>
+        <mode>thru</mode> <!--<mode>flc:0</mode> -->
+        <next_delay>15</next_delay>
+        <raw_audio_format>raw,wav,aif</raw_audio_format>
+        <sample_rate>192000</sample_rate>
+        <L24_format>1</L24_format>
+        <flac_header>1</flac_header>
+        <roon_mode>0</roon_mode>
+        <forced_mimetypes></forced_mimetypes>
+        <seek_after_pause>1</seek_after_pause>
+        <send_icy>2</send_icy>
+        <volume_on_play>1</volume_on_play>
+        <volume_feedback>1</volume_feedback>
+        <send_metadata>1</send_metadata>
+        <send_coverart>1</send_coverart>
+        <max_volume>100</max_volume>
+        <accept_nexturi>1</accept_nexturi>
+        <auto_play>0</auto_play>
+        <server></server>
+        <coverart></coverart>
+        <resample_options></resample_options>
+      </common>
+      <binding></binding>
+      <slimproto_log>info</slimproto_log>
+      <slimmain_log>warn</slimmain_log>
+      <stream_log>warn</stream_log>
+      <output_log>info</output_log>
+      <decode_log>warn</decode_log>
+      <main_log>info</main_log>
+      <upnp_log>info</upnp_log>
+      <util_log>warn</util_log>
+      <log_limit>-1</log_limit>
+    </squeeze2upnp>

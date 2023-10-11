@@ -80,7 +80,7 @@ Win32
 *.i??
 *.map
 *.tds
-config.xml
+#config.xml
 *.bat
 *-idx*
 *.save*
