@@ -1,4 +1,4 @@
-ARG ALPINE_VERSION="3.15"
+ARG ALPINE_VERSION="3.18"
 
 FROM alpine:$ALPINE_VERSION AS download-base
 WORKDIR /downloads
@@ -15,12 +15,12 @@ RUN ARCH2= && alpineArch="$(apk --print-arch)" \
 # https://sourceforge.net/projects/lms-plugins-philippe44/files
 # download and unzip to $BIN_FOLDER
 
-ARG BIN_FOLDER="Bin-1.81.0"
+ARG BIN_FOLDER="Bin-2.3.1"
 FROM download-base AS download
 
 WORKDIR /downloads
 COPY ./${BIN_FOLDER}/*-static .
-RUN mv "squeeze2upnp-$(cat /arch2.txt)-static" squeeze2upnp
+RUN mv "squeeze2upnp-linux-$(cat /arch2.txt)-static" squeeze2upnp && chmod +x squeeze2upnp
 
 FROM alpine:$ALPINE_VERSION
 
