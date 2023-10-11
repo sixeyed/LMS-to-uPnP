@@ -1,3 +1,233 @@
+2.3.1
+ - upon UPnP socket error, remove player at next update, don't need to wait timeout especially when playing
+ 
+2.3.0
+ - option <custom_discovery> to add non-standard UPnP queries
+ - maybe a fix why some server or name were never updated (XML_UpdateNode bug)
+ - display interface upon startup
+ 
+2.2.3
+ - in opus & vorbis direct decode mode, don't end before DISCONNECT and streambuf empty
+ - fix sync loop (build-up issue) in vorbis & opus direct decode
+ - more storage options
+
+2.2.2
+ - update various libraries
+ 
+2.2.1
+ - fix vorbis & opus end of stream
+ - new icy mode (used for cast version)
+ 
+2.1.23
+ - proper clip in Vorbis raw Ogg mode (unused in this version)
+ - end of decode compatible with raw Ogg mode
+ 
+2.1.22
+ - fix opus and vorbis failing to play with very large VorbisComment (artwork)
+ 
+2.1.21
+ - remove need of libmvec for x86_64 linux (libc "--disable-libmvec" and compiler with "-fno-fast-math")
+ 
+2.1.20
+ - use new libpupnp that fixes giant memory leak
+
+2.1.19
+ - move back to delaying STMd (30s by default)
+ 
+2.1.18
+ - release
+ 
+2.1.17.1
+ - increase discovery & auto-renewal timeouts which seems to improve stability a lot
+ 
+2.1.17
+ - libupnp should disable blocking connection (too many jobs)
+ 
+2.1.16
+ - don't delay stream in flow mode
+ 
+2.1.15
+ - delayed stream sock should only be sent once, if codec has not been acquired
+ 
+2.1.14
+ - release
+ 
+2.1.13.6
+ - missed nextURI fixed by a LMS "next" request rather an UPnP request
+ 
+2.1.13.5
+ - delayed stream log fix
+ 
+2.1.13.4
+ - don't disable "binding" when XML file does not exist
+ 
+2.1.13.3
+ - try to delay stream_sock to NextURI's HTTP request
+
+2.1.13.1
+ - don't call track_info if no track found
+ 
+2.1.13.1
+ - remove wait_underrun option which is too similar to no gapless. Still need to figure out what was the impact for HQPlayer
+ - when missing duration, request next track immediately at end of decoding
+ 
+2.1.13
+ - release
+ 
+2.1.12.11
+ - fix group volume
+ - remove PauseVolume (un-needed since plugin avoid volume to be set to 0 pause - too bad for Roon)
+ 
+2.1.12.10
+ - detect LMS mute correction
+ 
+2.1.12.9
+ - no fade-in/out at all on plugin or helper
+ 
+2.1.12.8
+ - potential build error
+ 
+2.1.12.7
+ - fix some variadic mistakes
+ 
+2.1.12.6
+ - remove "forced" mimetype test
+ 
+2.1.12.5
+ - fix once for all the TCPWindow size issue with Windows
+ - cleanup notify/callback and use variadic
+ - cleanup notify/callback and use variadic
+ 
+2.1.12.2
+ - move back to original stream as throttle can't work because client must send a FIN when server did send one 
+ and throttle would prevent that to happen in time, creating a TIME_WAIT event and a RST frame on Windows
+ - fix underrun logic
+
+2.1.12.1
+ - detect iface name
+ - use SO_KEEPALIVE and SO_RCVBUF
+ - better SSL handling in streaming thread
+
+2.1.12
+ - fix strings.txt
+ - ensure throttling does not go overboard
+ - fix mixed unsigned upconversion issue
+ 
+2.1.11
+ - don't hold streambuf mutex during sleep
+  
+2.1.10
+ - move throttle down to stream thread
+ 
+2.1.8
+ - sourceforge sha issue
+ 
+2.1.7
+ - add NextURI "underrun" mode for problematic players
+ - make sure we don't go below throttle threshold in one run
+ 
+2.1.6
+ - restore selection of binaries
+ 
+2.1.5
+ - always move to next streaming in slimproto
+ 
+2.1.4
+ - wrong PR
+ 
+2.1.3
+ - speed moderation (test version)
+
+2.1.2
+ - link for Windows users about VCREDIST
+ 
+2.1.1
+ - release
+
+2.1.0.0
+ - no more "next_delay" but instead wait until UPnP player requests track to start LMS streaming
+ 
+2.0.7.3
+ - don't use debug dll's
+
+2.0.7.2 (P)
+ - incomplete backport of log improvments
+ 
+2.0.7.1
+ - glibc is really static (-nss)
+ - give a bit of love to log window
+ 
+2.0.7
+ - use non-debug dll's
+ 
+2.0.6
+ - universal binaries for MacOS
+ - option to stop when pausing radio streams
+ 
+2.0.5
+ - add armv6
+ 
+2.0.4
+ - update libmdns
+ 
+2.0.3
+ - add arm64 for M1
+ 
+2.0.2
+ - copy of airupnp config code was causing players to be added all the time
+ 
+2.0.1
+ - new compîlers to allow glibc starting 2.23
+ - mips is bigendian by default
+ 
+2.0.0
+ - new build backend 
+ - iface can be used for binding
+ - many small changes...
+ 
+1.82.2
+ - fix protocolinfo all matches
+ - remove TCP_NODELAY for last chunk
+ 
+1.82.1
+ - accept protocolinfo with all match
+ - use TCP_NODELAY to send last chunk
+ 
+1.81.3
+ - output_http thread should wait for new_stream to be unset not for track_start as the latter can be missed if gain_and_fade is called while we sleep
+ 
+1.81.2
+ - no trace when offset is 0
+ - check codecs looks for audio/<codec> or audio/x-<codec> explicitely
+ 
+1.81.0
+ - do an HTPP 200 on non-satisfiable range
+
+1.80.4
+ - wakeup from long sleep timer when start playing to detect play activity faster
+
+1.80.3
+ - mp3 mimetype is audio/mpeg
+ - mimetypes audio/x-... where mishandled when setting "bridge-NN." extension
+
+1.80.2
+ - add proper opus DLLs
+ 
+1.80.1
+ - tweaks settings UI
+ 
+1.80.0
+ - add "null" encode mode
+ 
+1.71.0
+ - increase max sample rate
+ 
+1.70.0
+ - always release obuf when exiting output_thread 
+ - abort current output thread when codec/process start fails
+ - add flac_header type 3 where sample_count is adjusted based on first frame index
+ - increase max sample rate
+ 
 1.64.1
  - (P) callbackargs is an array
  

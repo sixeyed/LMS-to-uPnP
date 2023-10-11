@@ -1,87 +1,112 @@
-BASE		= ..
-CFLAGS		+= -Wno-multichar -Wno-unused-result
-
-ifeq ($(OS),Darwin)
-LINKSTATIC	=
-LDFLAGS 	+= -Wl,-dead_strip
-else
-LINKSTATIC 	= -static
-LDFLAGS 	+= -Wl,--gc-sections
+ifeq ($(CC),cc)
+CC=$(lastword $(subst /, ,$(shell readlink -f `which cc`)))
 endif
 
-TOOLS		= ./tools
-SRC		= ./squeeze2upnp
-SQUEEZETINY	= ./squeezetiny
-ALAC		= $(BASE)/alac
+ifeq ($(findstring gcc,$(CC)),gcc)
+CFLAGS  += -Wno-deprecated-declarations -Wno-format-truncation -Wno-stringop-truncation 
+LDFLAGS += -s -lstdc++
+#LDFLAGS += -lstdc++
+else
+CFLAGS += -fno-temp-file
+LDFLAGS += -lc++
+endif
 
-VALGRIND	= $(BASE)/valgrind
-UPNP 		= $(BASE)/libupnp/1.6.19
-FETCHER		= $(BASE)/http_fetcher
+PLATFORM ?= $(firstword $(subst -, ,$(CC)))
+HOST ?= $(word 2, $(subst -, ,$(CC)))
 
-DEFINES 	= -D_FILE_OFFSET_BITS=64 -DRESAMPLE -DCODECS -DUSE_SSL -D_GNU_SOURCE
-CFLAGS 		+= -fdata-sections -ffunction-sections 
+ifneq ($(HOST),macos)
+ifneq ($(HOST),solaris)
+LINKSTATIC = -static
+else
+LDFLAGS += -lssp	
+endif
+endif
 
-vpath %.c $(TOOLS):$(SRC):$(SQUEEZETINY):$(ALAC)
-vpath %.cpp $(TOOLS):$(SRC):$(SQUEEZETINY):$(ALAC)
+CORE              = bin/squeeze2upnp-$(HOST)
+BUILDDIR          = $(dir $(CORE))$(HOST)/$(PLATFORM)
+EXECUTABLE        = $(CORE)-$(PLATFORM)
+EXECUTABLE_STATIC = $(EXECUTABLE)-static
 
-INCLUDE = -I. \
-		  -I$(BASE)\
-		  -I$(VALGRIND)/memcheck -I$(VALGRIND)/include \
-		  -I$(BASE)/openssl/inc \
-		  -I$(SQUEEZETINY) \
+SRC	        = squeeze2upnp
+SQUEEZELITE	= squeezelite
+TOOLS		= crosstools/src
+MDNS		= libmdns/targets
+PUPNP 		= libpupnp/targets/$(HOST)/$(PLATFORM)
+CODECS		= libcodecs/targets
+OPENSSL		= libopenssl/targets/$(HOST)/$(PLATFORM)
+#VALGRIND	= $(BASE)/valgrind
+
+DEFINES 	= -DCODECS -DUSE_SSL -D_GNU_SOURCE -DUPNP_STATIC_LIB -DLINKALL -DRESAMPLE
+
+CFLAGS  += -Wall -fPIC -ggdb -O2 $(DEFINES) -fdata-sections -ffunction-sections 
+LDFLAGS += -lpthread -ldl -lm -L. 
+
+vpath %.c $(TOOLS):$(SRC):$(SQUEEZELITE)
+vpath %.cpp $(TOOLS):$(SRC):$(SQUEEZELITE)
+
+INCLUDE = -I$(OPENSSL)/include \
 		  -I$(TOOLS) \
-		  -I$(SRC) -I$(SRC)/inc \
-		  -I$(ALAC) \
-		  -I$(BASE)/flac/include\
-		  -I$(BASE)/faad2/include\
-		  -I$(BASE)/libmad\
-		  -I$(BASE)/libvorbis/include -I$(BASE)/libogg/include\
-		  -I$(BASE)/libopus/include -I$(BASE)/libopusfile/include\
-		  -I$(BASE)/soxr/src\
-		  -I$(UPNP)/ixml/inc -I$(UPNP)/upnp/inc -I$(UPNP)/build/inc -I$(UPNP)/threadutil/inc 
-		  		  
-DEPS	= $(SQUEEZETINY)/squeezedefs.h
+		  -I$(SQUEEZELITE) \
+		  -I$(SRC)/inc \
+		  -I$(PUPNP)/include/upnp -I$(PUPNP)/include/ixml -I$(PUPNP)/include/addons \
+		  -I$(CODECS)/include/flac -I$(CODECS)/include/mad \
+		  -I$(CODECS)/include/ogg -I$(CODECS)/include/vorbis \
+		  -I$(CODECS)/include/opus -I$(CODECS)/include/opusfile \
+		  -I$(CODECS)/include/faad2 \
+		  -I$(CODECS)/include/shine \
+		  -I$(CODECS)/include/soxr -I$(CODECS)/include/addons \
+		  -I$(MDNS)/include/mdnsvc -I$(MDNS)/include/mdnssd
+		  		  		  
+DEPS	= $(SRC)/inc/squeezedefs.h
 				  
-SOURCES = 	slimproto.c buffer.c util.c output_http.c main.c \
-			stream.c decode.c pcm.c alac.c alac_wrapper.cpp process.c resample.c \
-			flac_thru.c thru.c m4a_thru.c \
-			ag_dec.c ALACBitUtilities.c ALACDecoder.cpp dp_dec.c EndianPortable.c matrix_dec.c \
-			util_common.c avt_util.c mr_util.c tinyutils.c squeeze2upnp.c \
-			log_util.c config_upnp.c
+SOURCES = slimproto.c buffer.c output_http.c output.c main.c \
+		  stream.c decode.c pcm.c resample.c process.c \
+          alac.c flac.c mad.c vorbis.c opus.c faad.c \
+		  flac_thru.c m4a_thru.c thru.c \
+		  utils.c metadata.c mimetypes.c \
+		  cross_util.c cross_log.c cross_net.c cross_thread.c platform.c \
+		  config_upnp.c avt_util.c mr_util.c squeeze2upnp.c
+
+SOURCES_LIBS = cross_ssl.c
 		
-SOURCES_LIBS = flac.c mad.c faad.c vorbis.c opus.c output.c sslsym.c
-		
-OBJECTS 		= $(patsubst %.c,$(OBJ)/%.o,$(filter %.c,$(SOURCES))) $(patsubst %.cpp,$(OBJ)/%.o,$(filter %.cpp,$(SOURCES))) $(patsubst %.c,$(OBJ)/%.o,$(SOURCES_LIBS)) 
-OBJECTS_STATIC 	= $(patsubst %.c,$(OBJ)/%.o,$(filter %.c,$(SOURCES))) $(patsubst %.cpp,$(OBJ)/%.o,$(filter %.cpp,$(SOURCES))) $(patsubst %.c,$(OBJ)/%-static.o,$(SOURCES_LIBS)) 
+OBJECTS	= $(patsubst %.c,$(BUILDDIR)/%.o,$(filter %.c,$(SOURCES) $(SOURCES_LIBS)))
+OBJECTS	+= $(patsubst %.c,$(BUILDDIR)/%.o,$(filter %.cpp,$(SOURCES) $(SOURCES_LIBS)))
+OBJECTS_STATIC = $(patsubst %.c,$(BUILDDIR)/%.o,$(filter %.c,$(SOURCES))) $(patsubst %.c,$(BUILDDIR)/%-static.o,$(filter %.c,$(SOURCES_LIBS)))
+OBJECTS_STATIC	+= $(patsubst %.cpp,$(BUILDDIR)/%.o,$(filter %.cpp,$(SOURCES))) $(patsubst %.cpp,$(BUILDDIR)/%-static.o,$(filter %.cpp,$(SOURCES_LIBS)))
 
-LIBRARY 	= $(OBJ)/libupnp.a $(OBJ)/libixml.a $(OBJ)/libthreadutil.a $(OBJ)/libsoxr.a $(OBJ)/libshine.a
-LIBRARY_STATIC 	= $(LIBRARY) $(OBJ)/libfaad.a $(OBJ)/libFLAC.a $(OBJ)/libmad.a $(OBJ)/libvorbisfile.a $(OBJ)/libvorbis.a $(OBJ)/libogg.a $(OBJ)/libvorbisfile.a $(OBJ)/libopusfile.a $(OBJ)/libopus.a -lssl -lcrypto
+LIBRARY	= $(PUPNP)/libpupnp.a \
+		 $(CODECS)/$(HOST)/$(PLATFORM)/libcodecs.a \
+		 
+LIBRARY_STATIC 	= $(LIBRARY) $(OPENSSL)/libopenssl.a
 
-all: $(EXECUTABLE) $(EXECUTABLE_STATIC)
+all: directory $(EXECUTABLE) $(EXECUTABLE_STATIC)
 
-$(EXECUTABLE): $(OBJECTS)
-	$(CC) $(OBJECTS) $(LIBRARY) $(LDFLAGS) -o $@
+$(EXECUTABLE): $(OBJECTS) 
+	$(CC) $(OBJECTS) $(LIBRARY) $(CFLAGS) $(LDFLAGS) -o $@
+ifeq ($(HOST),macos)
+	rm -f $(CORE)
+	lipo -create -output $(CORE) $$(ls $(CORE)* | grep -v '\-static')
+endif
 
-$(EXECUTABLE_STATIC): $(OBJECTS_STATIC)
-	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(LDFLAGS) $(LINKSTATIC) -o $@	
-
-$(OBJECTS): $(DEPS) | bin $(OBJ)
-
-$(OBJ):
-	@mkdir -p $@
+$(EXECUTABLE_STATIC): $(OBJECTS_STATIC) $(DEPS)
+	$(CC) $(OBJECTS_STATIC) $(LIBRARY_STATIC) $(CFLAGS) $(LDFLAGS) $(LINKSTATIC) -o $@
+ifeq ($(HOST),macos)
+	rm -f $(CORE)-static
+	lipo -create -output $(CORE)-static $(CORE)-*-static
+endif
 	
-bin:	
+
+$(OBJECTS) $(OBJECTS_STATIC): $(DEPS)	
+
+directory:
+	@mkdir -p $(BUILDDIR)
 	@mkdir -p bin
 
-$(OBJ)/%.o : %.c
+$(BUILDDIR)/%.o : %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@
 
-$(OBJ)/%.o : %.cpp
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDE) $< -c -o $@	
-
-$(OBJ)/%-static.o : %.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DLINKALL $(INCLUDE) $< -c -o $(OBJ)/$*-static.o	
+$(BUILDDIR)/%-static.o : %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DSSL_STATIC_LIB $(INCLUDE) $< -c -o $(BUILDDIR)/$*-static.o	
 	
 clean:
-	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) 
-
+	rm -f $(OBJECTS) $(EXECUTABLE) $(OBJECTS_STATIC) $(EXECUTABLE_STATIC) $(CORE) $(CORE)-static

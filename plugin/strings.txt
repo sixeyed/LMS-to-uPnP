@@ -33,11 +33,12 @@ PLUGIN_UPNPBRIDGE_RESTART
 
 PLUGIN_UPNPBRIDGE_BINARIES_DESC
 	EN	Select the Squeeze2upnp binary which best matches your machine's architecture.
-	EN	<br>- on raspi, use only armv6hf version
-	EN	<br>- armv5te emulates floating point
 	
 PLUGIN_UPNPBRIDGE_WARNING
 	EN	It is HIGHLY recommended to stop the bridge before changing parameters
+    
+PLUGIN_UPNPBRIDGE_VCREDIST
+	EN	Windows users, please install this
 	
 PLUGIN_UPNPBRIDGE_PARAMINFO
 	EN	An EMPTY parameter value means that [common parameters] is used
@@ -139,6 +140,12 @@ PLUGIN_UPNPBRIDGE_AUTOSAVECONFIG
 PLUGIN_UPNPBRIDGE_DELCONFIG
 	EN	Erase
 	
+PLUGIN_UPNPBRIDGE_CUSTOMDISCOVERY
+	EN	UPnP extra search tokens
+	
+PLUGIN_UPNPBRIDGE_CUSTOMDISCOVERY_DESC
+	EN	UPnP search is using standard tokens "urn:schemas-upnp-org:device:MediaRenderer:1" and "urn:schemas-upnp-org:device:MediaRenderer:2". Some players are creative and use different scheme although they are UPnP. Add here a comma or semi-colon separated list of search tokens
+	
 PLUGIN_UPNPBRIDGE_BINDING
 	EN	Network binding and port
 	
@@ -149,7 +156,7 @@ PLUGIN_UPNPBRIDGE_USELMSBINDING
 	EN	Use LMS interface
 
 PLUGIN_UPNPBRIDGE_BINDING_DESC
-	EN	The network ip interface and base port to be used (format [ip][:port]. This is needed if you have a computer with multiple network interfaces.
+	EN	The network ip interface and base port to be used (format [ip|iface][:port]. This is needed if you have a computer with multiple network interfaces. The iface is the name of the interface found using ipconfig/ifconifg
 	EN	Use ? to let the bridge decide or check "use LMS interface" to make sure the Bridge uses the same network as LMS and add an optional baseport
 	EN	The bridge will use up to 64 ports from the base port (min 49152). When not set, random values are used.
 	
@@ -165,11 +172,11 @@ PLUGIN_UPNPBRIDGE_STREAMOPTIONS_DESC
 	EN	'no-length' to be used. Use 'if known' to send size only when using pcm audio and duration is known 
 	EN	<br>- Some players support gapless playback and thus automatically move to next track in playlist. This is automatically
 	EN	detected, but you can force it disabled. Others (e.g. Bose) are totally broken and are stuck toward track end. Use 'force'
-	EN	to force them to move to next track
-	EN	<br>- UPnP players can use different methods to restart from paused position. If your player does not pause or resume, 
-	EN	use this tp force LMS to restart from paused position
+	EN	to force them to move to next track.
 	EN	<br>- With large buffers, next track can be requested very quickly and some remote streaming services might close the connection.
 	EN	That request can be delayed up to &ltN&gt seconds before end of the current track. Set to 0 to request it immediately
+	EN	<br>- If your player does not resume where it was paused, use this to force LMS to restart from memorized position
+	EN	<br>- Some players refuse to pause live streams (webradios). Use this to stop when LMS requests a pause
 	EN	<br>see User Guide for more details (really). 
 		
 PLUGIN_UPNPBRIDGE_HTTPMODE
@@ -193,15 +200,27 @@ PLUGIN_UPNPBRIDGE_ACCEPTNEXTURI
 PLUGIN_UPNPBRIDGE_NEXTFORCE
 	EN	Force
 	
+PLUGIN_UPNPBRIDGE_NEXTDELAY
+	EN	Delay
+    
 PLUGIN_UPNPBRIDGE_SEEKAFTERPAUSE
-	EN	Seek on resume
+	EN	Unpause
 	
-PLUGIN_UPNPBRIDGE_NEXTDELAY1
-	EN	Next
+PLUGIN_UPNPBRIDGE_UNPAUSESEEK
+	EN	Seek
 	
-PLUGIN_UPNPBRIDGE_NEXTDELAY2
-	EN	afore end
-
+PLUGIN_UPNPBRIDGE_UNPAUSERESUME
+	EN	Resume
+	
+PLUGIN_UPNPBRIDGE_LIVEPAUSE
+	EN	Live pause	
+	
+PLUGIN_UPNPBRIDGE_PAUSE
+	EN	Pause		
+	
+PLUGIN_UPNPBRIDGE_STOP
+	EN	Stop			
+	
 PLUGIN_UPNPBRIDGE_UPNPAUDIOCAPS
 	EN	UPnP player audio capabilities
 
@@ -256,11 +275,14 @@ PLUGIN_UPNPBRIDGE_ENCODEPARAMS_DESC
 	EN	improves compatibility by sending controlled format and allows replay gain as well as fading in and out. It's also 
 	EN	possible to send audio in a continuous flow of data instead of tracks one-by-one to enable true gapless and 
 	EN	cross-fading. See user's guide for more details
-	EN	<br><i>- Transcode:</i> format sent to player. When left empty or set to 'none', audio is simply passed through to player
+	EN	<br><i>- Transcode:</i> format sent to player. When left empty or set to 'none', audio is simply passed through to player.
+	EN	Use 'silent' to send mp3 silent frames and use the player for display only (don't maintain sync)
 	EN	<br><i>- Flow:</i> enable "flow" mode where playlists are sent as a continuous audio stream.
 	EN	<br><i>- 24 bits PCM:</i> 24 bits sample can be sent in plain or packed using a special DVD formt. If UPnP player does
 	EN	not support 24 bits pcm at all, samples can tbe truncated to 16 bits. Some players accept 'wav' in 24 bits but not "raw",
 	EN	in which case truncation is only made for "raw". 
+	EN	<br><i>- Flac header:</i> when seeking, LMS removes flac header but most UPnP requires it. Headers contain "total number 
+	EN	of samples" and different values can be tried (flac standard says 0 should work but it does not always)
 	EN	<br><i>- Flac compression:</i> in flac mode, set the compression level. 0 = lowest compression & CPU load
 	EN	<br><i>- MP3 bitrate:</i> in mp3 mode, set bitrate
 	EN	<br><i>- Resample at:</i> resample rate for re-encoding. When "No higher" is set, resampling will only happen if rate is
@@ -349,7 +371,8 @@ PLUGIN_UPNPBRIDGE_ICYTEXT
 
 PLUGIN_UPNPBRIDGE_SENDMETADATA_DESC
 	EN	- When a UPnP player has a display, LMS can send metadata (title, artist, album) to it. 
-	EN	<br>- You can also force resolution of artwork using syntax &ltX&gtx&ltY&gt (leave it empty for default))
+	EN	<br>- You can also force resolution of artwork using syntax &ltX&gtx&ltY&gt. You must use LMS to proxy artwork, not 
+	EN	mysqueezebox.com for that to work (leave it empty for default)
 	EN	<br>- ICY metadata is an option to send live title when playing webradio. Use 'Text only' with players that don't support artwork in ICY.
 	EN	This <b>DOES NOT</b> work if you have set a password for LMS command access
 	

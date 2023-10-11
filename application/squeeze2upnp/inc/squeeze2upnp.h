@@ -25,12 +25,12 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include "pthread.h"
 
 #include "upnp.h"
-#include "ithread.h"
 #include "squeezedefs.h"
 #include "squeezeitf.h"
-#include "util.h"
+#include "cross_util.h"
 
 /*----------------------------------------------------------------------------*/
 /* typedefs */
@@ -49,13 +49,15 @@ struct sService {
 	char EventURL	[RESOURCE_LENGTH];
 	char ControlURL	[RESOURCE_LENGTH];
 	Upnp_SID		SID;
-	s32_t			TimeOut;
-	u32_t			Failed;
+	int32_t			TimeOut;
+	uint32_t		Failed;
 };
 
-typedef struct sMRConfig
+
+typedef struct sMRConfig
 {
 	bool		SeekAfterPause;
+	bool		LivePause;
 	bool		ByteSeek;
 	bool		Enabled;
 	int			RemoveTimeout;
@@ -67,11 +69,13 @@ struct sService {
 	sq_icy_e	SendIcy;
 	int			MaxVolume;
 	bool		AutoPlay;
-	char		ForcedMimeTypes[_STR_LEN_];
+	char		ForcedMimeTypes[STR_LEN];
+	char		CustomPattern[STR_LEN * 8];
+
 } tMRConfig;
 
 struct sMR {
-	u32_t Magic;									// just a marker to trace context in memory
+	uint32_t Magic;									// just a marker to trace context in memory
 	bool  Running;
 	tMRConfig Config;
 	sq_dev_param_t	sq_config;
@@ -84,14 +88,14 @@ struct sMR {
 	char			*NextProtoInfo;					// gapped next protocolInfo
 	metadata_t		NextMetaData;					// gapped next metadata
 	char			*ExpectedURI;					// to detect track change
-	s32_t			Duration;       			 	// for players that don't report end of track (Bose)
-	u32_t 			ElapsedLast, ElapsedOffset;     // for players that reset counter on icy changes
+	int32_t			Duration;       			 	// for players that don't report end of track (Bose)
+	uint32_t 		ElapsedLast, ElapsedOffset;     // for players that reset counter on icy changes
 	bool			ShortTrack;    					// current or next track is short
-	s16_t			ShortTrackWait;					// stop timeout when short track is last track
+	int16_t			ShortTrackWait;					// stop timeout when short track is last track
 	sq_action_t		sqState;
-	u8_t			*seqN;
+	uint8_t			*seqN;
 	void			*WaitCookie, *StartCookie;
-	tQueue			ActionQueue;
+	cross_queue_t	ActionQueue;
 	unsigned		TrackPoll, StatePoll;
 	int				InfoExPoll;
 	int	 			SqueezeHandle;
@@ -100,23 +104,24 @@ struct sMR {
 	struct sMR		*Master;
 	pthread_mutex_t Mutex;
 	pthread_t 		Thread;
-	double			Volume, PauseVolume;
+	double			Volume;
 	bool			Muted;
-	u32_t			VolumeStampRx, VolumeStampTx;	// timestamps to filter volume loopbacks
-	u16_t			ErrorCount;                     // UPnP protocol error count
-	u32_t			LastSeen;						// presence timeout for player which went dark
+	uint32_t		VolumeStampRx, VolumeStampTx;	// timestamps to filter volume loopbacks
+	int				ErrorCount;                     // UPnP protocol error count, negative means fatal error
+	uint32_t		LastSeen;						// presence timeout for player which went dark
 	char			*Sink;
 };
 
 extern UpnpClient_Handle   	glControlPointHandle;
+extern char					glCustomDiscovery[];
 extern char 				glBinding[];
-extern s32_t				glLogLimit;
+extern int32_t				glLogLimit;
 extern tMRConfig			glMRConfig;
 extern sq_dev_param_t		glDeviceParam;
 extern struct sMR			glMRDevices[MAX_RENDERERS];
 extern pthread_mutex_t 		glMRMutex;
 
-int 			MasterHandler(Upnp_EventType EventType, void *Event, void *Cookie);
-int 			ActionHandler(Upnp_EventType EventType, void *Event, void *Cookie);
+int MasterHandler(Upnp_EventType EventType, const void* Event, void* Cookie);
+int ActionHandler(Upnp_EventType EventType, const void* Event, void* Cookie);
 
 #endif

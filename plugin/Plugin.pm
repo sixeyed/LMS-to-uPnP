@@ -42,7 +42,8 @@ sub hasOutputChannels {
 
 sub fade_volume {
 	my ($client, $fade, $callback, $callbackargs) = @_;
-	return $fade_volume->($client, $fade, $callback, $callbackargs) if $fade > 0 || $client->modelName !~ /UPnPBridge/;
+	# no fade-in or out, we don't want that flur of commands
+	return $fade_volume->($client, $fade, $callback, $callbackargs) if $client->modelName !~ /UPnPBridge/ || ($fade > 0 && $client->can('setMute'));
 	return $callback->(@{$callbackargs}) if $callback;
 }
 
@@ -56,6 +57,8 @@ sub initPlugin {
 	
 	$fade_volume = \&Slim::Player::SqueezePlay::fade_volume;
 	*Slim::Player::SqueezePlay::fade_volume = \&fade_volume;
+	
+	*Slim::Utils::Log::upnpbridgeLogFile = sub { Plugins::UPnPBridge::Squeeze2upnp->logFile; };
 
 	$class->SUPER::initPlugin(@_);
 	
@@ -68,9 +71,10 @@ sub initPlugin {
 	if (!$::noweb) {
 		require Plugins::UPnPBridge::Settings;
 		Plugins::UPnPBridge::Settings->new;
-		Slim::Web::Pages->addPageFunction("^upnpbridge-log.log", \&Plugins::UPnPBridge::Squeeze2upnp::logHandler);
-		Slim::Web::Pages->addPageFunction("^upnpbridge-config.xml", \&Plugins::UPnPBridge::Squeeze2upnp::configHandler);
-		Slim::Web::Pages->addPageFunction("upnpbridge-guide.htm", \&Plugins::UPnPBridge::Squeeze2upnp::guideHandler);
+		# there is a bug in LMS where the "content-type" set in handlers is ignored, only extension matters (and is html by default)
+		Slim::Web::Pages->addPageFunction('upnpbridge-log', \&Plugins::UPnPBridge::Squeeze2upnp::logHandler);
+		Slim::Web::Pages->addPageFunction('upnpbridge-config.xml', \&Plugins::UPnPBridge::Squeeze2upnp::configHandler);
+		Slim::Web::Pages->addPageFunction('upnpbridge-guide', \&Plugins::UPnPBridge::Squeeze2upnp::guideHandler);
 	}
 	
 	$log->warn(Dumper(Slim::Utils::OSDetect::details()));

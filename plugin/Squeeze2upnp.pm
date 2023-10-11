@@ -23,64 +23,56 @@ sub binaries {
 	if ($os->{'os'} eq 'Linux') {
 
 		if ($os->{'osArch'} =~ /x86_64/) {
-			return qw( squeeze2upnp-x86-64-static squeeze2upnp-x86-64 );
+			return qw(squeeze2upnp-linux-x86_64 squeeze2upnp-linux-x86_64-static);
 		}
 		if ($os->{'binArch'} =~ /i386/) {
-			return qw(squeeze2upnp-x86-static squeeze2upnp-x86 );
+			return qw(squeeze2upnp-linux-x86 squeeze2upnp-linux-x86-static);
 		}
 		if ($os->{'osArch'} =~ /aarch64/) {
-			return qw(squeeze2upnp-aarch64-static squeeze2upnp-aarch64 squeeze2upnp-armv6hf-static squeeze2upnp-armv6hf) ;
-		}
-		if ($os->{'binArch'} =~ /armhf/) {
-			return qw( squeeze2upnp-armv6hf-static squeeze2upnp-armv6hf );
+			return qw(squeeze2upnp-linux-aarch64 squeeze2upnp-linux-aarch64-static);
 		}
 		if ($os->{'binArch'} =~ /arm/) {
-			return qw( squeeze2upnp-armv5te-static squeeze2upnp-armv5te );
+			return qw(squeeze2upnp-linux-arm squeeze2upnp-linux-arm-static squeeze2upnp-linux-armv6 squeeze2upnp-linux-armv6-static squeeze2upnp-linux-armv5 squeeze2upnp-linux-armv5-static);
 		}
 		if ($os->{'binArch'} =~ /powerpc/) {
-			return qw( squeeze2upnp-ppc-static squeeze2upnp-ppc );
+			return qw(squeeze2upnp-linux-powerpc squeeze2upnp-linux-powerpc-static);
 		}
 		if ($os->{'binArch'} =~ /sparc/) {
-			return qw( squeeze2upnp-sparc-static squeeze2upnp-sparc );
+			return qw(squeeze2upnp-linux-sparc64 squeeze2upnp-linux-sparc64-static);
 		}
+		if ($os->{'binArch'} =~ /mips/) {
+			return qw(squeeze2upnp-linux-mips squeeze2upnp-linux-mips-static);
+		}		
 		
-		# fallback to offering all linux options for case when architecture detection does not work
-		return qw( squeeze2upnp-x86-64 squeeze2upnp-x86-64-static squeeze2upnp-x86 squeeze2upnp-x86-static squeeze2upnp-armv6hf squeeze2upnp-armv6hf-static squeeze2upnp-armv5te squeeze2upnp-armv5te-static squeeze2upnp-ppc squeeze2upnp-ppc-static
-		squeeze2upnp-sparc squeeze2upnp-sparc-static squeeze2upnp-aarch64 squeeze2upnp-aarch64_static );
 	}
 	
 	if ($os->{'os'} eq 'Unix') {
 	
+		if ($os->{'osName'} eq 'solaris') {
+			return qw(squeeze2upnp-solaris-x86_64 squeeze2upnp-solaris-x86_64-static);
+		}	
 		if ($os->{'osName'} =~ /freebsd/) {
-			return qw(  squeeze2upnp-bsd-x64-static squeeze2upnp-bsd-x64 );
+			return qw(squeeze2upnp-freebsd-x86_64 squeeze2upnp-freebsd-x86_64-static);
 		}
 		
 	}	
 	
 	if ($os->{'os'} eq 'Darwin') {
-		return qw( squeeze2upnp-osx-multi-static squeeze2upnp-osx-multi );
+		return qw(squeeze2upnp-macos squeeze2upnp-macos-static);
 	}
-		
+	
 	if ($os->{'os'} eq 'Windows') {
-		return qw(squeeze2upnp-win.exe);
+		return qw(squeeze2upnp.exe squeeze2upnp-static.exe);
 	}	
 	
 }
 
 sub bin {
 	my $class = shift;
-
 	my @binaries = $class->binaries;
+	my $bin = $prefs->get("bin");
 
-	if (my $b = $prefs->get("bin")) {
-		for my $bin (@binaries) {
-			if ($bin eq $b) {
-				return $b;
-			}
-		}
-	}
-
-	return $binaries[0];
+	return grep($bin, @binaries) ? $bin : @binaries[0];
 }
 
 sub start {
@@ -93,7 +85,7 @@ sub start {
 
 	my @params;
 	my $logging;
-
+	
 	push @params, ("-Z");
 	
 	if ($prefs->get('autosave')) {
@@ -182,11 +174,11 @@ sub beat {
 	my ($class, $path, @args) = @_;
 	
 	if ($prefs->get('autorun') && !($squeeze2upnp && $squeeze2upnp->alive)) {
-		$log->error('crashed ... restarting');
+		$log->error('load failed or crashed ... restarting');
 		
 		if ($prefs->get('logging')) {
 			open(my $fh, ">>", $class->logFile);
-			print $fh "\nRetarting Squeeze2upnp after crash: $path @args\n";
+			print $fh "\nRestarting Squeeze2upnp after load failure or crash: $path @args\n";
 			close $fh;
 		}
 		
@@ -230,41 +222,27 @@ sub configFile {
 }
 
 sub logHandler {
-	my ($client, $params, undef, undef, $response) = @_;
+	my ($client, $params, $callback, $httpClient, $response) = @_;
+	my $body = \'';
 
-	$response->header("Refresh" => "10; url=" . $params->{path} . ($params->{lines} ? '?lines=' . $params->{lines} : ''));
-	$response->header("Content-Type" => "text/plain; charset=utf-8");
+	if ( main::WEBUI ) {
+		$body = Slim::Web::Pages::Common->logFile($httpClient, $params, $response, 'upnpbridge');
+		# as of LMS 8.3, this is in fact ignored (overwritten)
+		$response->header('Content-Type' => 'text/html; charset=utf-8');	
+	}	
 
-	my $body = '';
-	my $file = File::ReadBackwards->new(logFile());
-	
-	if ($file){
-
-		my @lines;
-		my $count = $params->{lines} || 1000;
-
-		while ( --$count && (my $line = $file->readline()) ) {
-			unshift (@lines, $line);
-		}
-
-		$body .= join('', @lines);
-
-		$file->close();			
-	};
-
-	return \$body;
+	return $body;
 }
 
 sub configHandler {
 	my ($client, $params, undef, undef, $response) = @_;
-
-	$response->header("Content-Type" => "text/xml; charset=utf-8");
-
 	my $body = '';
+	
+	# as of LMS 8.3, this is in fact ignored (overwritten)
+	$response->header('Content-Type' => 'text/xml; charset=utf-8');
 	
 	if (-e configFile) {
 		open my $fh, '<', configFile;
-		
 		read $fh, $body, -s $fh;
 		close $fh;
 	}	
@@ -274,7 +252,6 @@ sub configHandler {
 
 sub guideHandler {
 	my ($client, $params) = @_;
-		
 	return Slim::Web::HTTP::filltemplatefile('plugins/UPnPBridge/userguide.htm', $params);
 }
 
